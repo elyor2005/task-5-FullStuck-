@@ -1,52 +1,43 @@
-// import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 
-// let isConnected = false; // track connection state
+declare global {
+  // Ensures global caching works across reloads in Next.js
+  // eslint-disable-next-line no-var
+  var mongooseCache: { conn: Mongoose | null; promise: Promise<Mongoose> | null } | undefined;
+}
 
-// export async function connectDB() {
-//   if (isConnected) {
-//     console.log("⚡ Already connected to MongoDB");
-//     return;
-//   }
+let cached = global.mongooseCache;
 
-//   try {
-//     const conn = await mongoose.connect(process.env.MONGODB_URI as string, {
-//       dbName: "testdb", // change if you want a custom DB name
-//     });
-
-//     isConnected = true;
-//     console.log("✅ MongoDB Connected:", conn.connection.host);
-//   } catch (error) {
-//     console.error("❌ MongoDB connection error:", error);
-//     throw error;
-//   }
-// }
-
-// src/lib/mongodb.ts
-import mongoose from "mongoose";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let cached = (global as any).mongooseCache as { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } | undefined;
 if (!cached) {
-  cached = { conn: null, promise: null };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (global as any).mongooseCache = cached;
+  cached = global.mongooseCache = { conn: null, promise: null };
 }
 
 /**
- * connectDB - connect to MongoDB with caching to prevent multiple connections in dev
- * important: call this before using models
+ * Connect to MongoDB with caching to avoid multiple connections during dev
  */
-export async function connectDB() {
-  if (cached!.conn) return cached!.conn;
+export async function connectDB(): Promise<Mongoose> {
+  if (cached!.conn) {
+    return cached!.conn;
+  }
 
   if (!process.env.MONGODB_URI) {
-    throw new Error("MONGODB_URI is not defined in env");
+    throw new Error("❌ MONGODB_URI is not defined in environment variables");
   }
 
   if (!cached!.promise) {
-    cached!.promise = mongoose.connect(process.env.MONGODB_URI).then((m) => m);
+    const opts = {
+      bufferCommands: false,
+    };
+
+    cached!.promise = mongoose.connect(process.env.MONGODB_URI, opts).then((mongoose) => mongoose);
   }
 
-  cached!.conn = await cached!.promise;
+  try {
+    cached!.conn = await cached!.promise;
+  } catch (error) {
+    cached!.promise = null;
+    throw error;
+  }
+
   return cached!.conn;
 }
