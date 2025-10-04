@@ -61,7 +61,7 @@
 // middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyToken } from "./lib/jwt";
+import { verifyToken } from "@/lib/jwt";
 
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
