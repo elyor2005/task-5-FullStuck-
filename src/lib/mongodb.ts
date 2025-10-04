@@ -1,43 +1,31 @@
-import mongoose, { Mongoose } from "mongoose";
+// src/lib/mongodb.ts
+import mongoose from "mongoose";
 
-declare global {
-  // Ensures global caching works across reloads in Next.js
-  // eslint-disable-next-line no-var
-  var mongooseCache: { conn: Mongoose | null; promise: Promise<Mongoose> | null } | undefined;
+const globalWithMongoose = globalThis as unknown as {
+  mongooseCache?: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null };
+};
+
+if (!globalWithMongoose.mongooseCache) {
+  globalWithMongoose.mongooseCache = { conn: null, promise: null };
 }
 
-let cached = global.mongooseCache;
+export async function connectDB() {
+  const cached = globalWithMongoose.mongooseCache!;
 
-if (!cached) {
-  cached = global.mongooseCache = { conn: null, promise: null };
-}
-
-/**
- * Connect to MongoDB with caching to avoid multiple connections during dev
- */
-export async function connectDB(): Promise<Mongoose> {
-  if (cached!.conn) {
-    return cached!.conn;
+  if (cached.conn) {
+    return cached.conn;
   }
 
-  if (!process.env.MONGODB_URI) {
-    throw new Error("❌ MONGODB_URI is not defined in environment variables");
-  }
-
-  if (!cached!.promise) {
-    const opts = {
-      bufferCommands: false,
-    };
-
-    cached!.promise = mongoose.connect(process.env.MONGODB_URI, opts).then((mongoose) => mongoose);
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONGODB_URI as string).then((mongooseInstance) => mongooseInstance);
   }
 
   try {
-    cached!.conn = await cached!.promise;
-  } catch (error) {
-    cached!.promise = null;
-    throw error;
+    cached.conn = await cached.promise;
+  } catch (err) {
+    cached.promise = null;
+    throw err;
   }
 
-  return cached!.conn;
+  return cached.conn;
 }
