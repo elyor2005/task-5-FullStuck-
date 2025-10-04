@@ -1,10 +1,10 @@
 // src/app/api/auth/register/route.ts
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { connectDB } from "../../../../lib/mongodb";
-import UserModel from "../../../../models/User";
-import { hashPassword } from "../../../../lib/hash";
-import { sendConfirmationEmail } from "../../../../lib/email";
+import { connectDB } from "@/lib/mongodb";
+import UserModel from "@/models/User";
+import { hashPassword } from "@/lib/hash";
+import { sendConfirmationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {

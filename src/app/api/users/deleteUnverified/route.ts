@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
-import { connectDB } from "../../../../lib/mongodb";
-import UserModel from "../../../../models/User";
+import { connectDB } from "@/lib/mongodb";
+import UserModel from "@/models/User";
 
 export async function POST() {
   await connectDB();

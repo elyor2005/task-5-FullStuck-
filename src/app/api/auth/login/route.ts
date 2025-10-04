@@ -1,9 +1,9 @@
 // src/app/api/auth/login/route.ts
 import { NextResponse } from "next/server";
-import { connectDB } from "../../../../lib/mongodb";
-import UserModel from "../../../../models/User";
-import { comparePassword } from "../../../../lib/hash";
-import { signToken } from "../../../../lib/jwt";
+import { connectDB } from "@/lib/mongodb";
+import UserModel from "@/models/User";
+import { comparePassword } from "@/lib/hash";
+import { signToken } from "@/lib/jwt";
 
 export async function POST(req: Request) {
   await connectDB();

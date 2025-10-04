@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/api/test-email/route.ts
 import { NextResponse } from "next/server";
-import { sendConfirmationEmail } from "@/src/lib/email";
+import { sendConfirmationEmail } from "@/lib/email";
 
 export async function GET() {
   try {

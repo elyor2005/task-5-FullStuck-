@@ -1,8 +1,8 @@
 // src/app/api/auth/me/route.ts
 import { NextResponse, type NextRequest } from "next/server";
-import { verifyToken } from "../../../../lib/jwt";
-import { connectDB } from "../../../../lib/mongodb";
-import UserModel from "../../../../models/User";
+import { verifyToken } from "@/lib/jwt";
+import { connectDB } from "@/lib/mongodb";
+import UserModel from "@/models/User";
 
 export async function GET(req: NextRequest) {
   await connectDB();
