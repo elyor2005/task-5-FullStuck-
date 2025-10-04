@@ -9,19 +9,24 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const pathname = url.pathname;
 
-  const PUBLIC_PATHS = ["/api/auth", "/login", "/register", "/api/test", "/auth/confirmed"];
+  // ✅ Allow public routes (no authentication required)
+  const PUBLIC_PATHS = ["/api/auth", "/login", "/register", "/auth/confirmed", "/api/test"];
+
   if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
+  // ✅ Get token from cookies
   const token = req.cookies.get("token")?.value;
-  if (!token) {
+
+  // ✅ If no token → redirect to login (but avoid redirect loops)
+  if (!token && !pathname.startsWith("/login")) {
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // ✅ Handle both string & object payloads
-  const payload = verifyToken(token) as string | JwtPayload;
+  // ✅ Verify token
+  const payload = verifyToken(token || "") as string | JwtPayload;
 
   if (!payload || typeof payload === "string" || !("id" in payload)) {
     url.pathname = "/login";
@@ -31,7 +36,6 @@ export async function middleware(req: NextRequest) {
   try {
     await connectDB();
 
-    // ✅ Explicit type cast (fixes the TS inference issue)
     const user = (await UserModel.findById(payload.id).lean()) as IUser | null;
 
     if (!user) {
@@ -39,22 +43,32 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    // ✅ Prevent blocked users
     if (user.status === "blocked") {
       url.pathname = "/login";
+      url.searchParams.set("error", "blocked");
       return NextResponse.redirect(url);
     }
 
+    // ✅ Prevent unverified users
     if (user.status === "unverified") {
       url.pathname = "/login";
       url.searchParams.set("error", "unverified");
       return NextResponse.redirect(url);
     }
+
+    // ✅ Redirect logged-in users away from login/register
+    if ((pathname === "/login" || pathname === "/register") && user.status === "active") {
+      url.pathname = "/admin"; // default protected page
+      return NextResponse.redirect(url);
+    }
   } catch (err) {
-    console.error("Middleware DB error:", err);
+    console.error("❌ Middleware DB error:", err);
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
+  // ✅ Allow valid users to continue
   return NextResponse.next();
 }
 

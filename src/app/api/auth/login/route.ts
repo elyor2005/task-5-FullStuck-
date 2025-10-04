@@ -49,9 +49,9 @@ export async function POST(req: Request) {
     // set cookie
     res.cookies.set("token", token, {
       httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
+      secure: true, // force secure on production (required by Vercel)
+      sameSite: "none", // cross-site allowed (important for Vercel)
+      path: "/", // allow all routes
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
