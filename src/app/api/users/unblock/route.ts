@@ -1,18 +1,31 @@
+// src/app/api/users/unblock/route.ts
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import UserModel from "@/models/User";
+import { serverAuthGuard } from "@/lib/authDuard";
 
 export async function POST(req: Request) {
-  await connectDB();
+  const guard = await serverAuthGuard(req);
+  if (guard instanceof NextResponse) return guard; // auth failed / blocked etc
+
+  // guard is current user
+  const currentUser: any = guard;
+
   try {
-    const { ids } = (await req.json()) as { ids: string[] };
-    if (!ids || !ids.length) return NextResponse.json({ error: "No users selected" }, { status: 400 });
+    const body = await req.json(); // { ids: []}
+    const ids: string[] = body?.ids || [];
 
-    await UserModel.updateMany({ _id: { $in: ids } }, { $set: { status: "active" } });
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: "No ids provided" }, { status: 400 });
+    }
 
-    return NextResponse.json({ message: "Selected users unblocked ✅" });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await connectDB();
+
+    const result = await UserModel.updateMany({ _id: { $in: ids } }, { $set: { status: "active" } }).exec();
+
+    return NextResponse.json({ message: `Unblocked ${result.modifiedCount || 0} users` });
   } catch (err: any) {
-    return NextResponse.json({ error: "Failed to unblock users", details: err?.message }, { status: 500 });
+    console.error("Unblock error:", err);
+    return NextResponse.json({ error: "Unblock failed", details: err?.message }, { status: 500 });
   }
 }
