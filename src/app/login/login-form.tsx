@@ -44,15 +44,24 @@ export default function LoginForm() {
       });
 
       const data = await res.json();
+
       if (res.ok) {
-        localStorage.setItem("token", data.token);
-        window.location.href = "/admin";
-      } else {
-        if (data.error === "Please confirm your email first") {
-          setMessage("⚠️ Your account is not verified. Please check your email.");
+        // ✅ Show different messages depending on status
+        if (data.user?.status === "unverified") {
+          setMessage("⚠️ Login successful, but your account is not verified yet. Please check your email.");
         } else {
-          setMessage(`❌ ${data.error || "Invalid credentials"}`);
+          setMessage("✅ Login successful!");
         }
+
+        // save token if backend sends it (optional)
+        if (data.token) localStorage.setItem("token", data.token);
+
+        // redirect after short delay
+        setTimeout(() => {
+          window.location.href = "/admin"; // or /users depending on your app
+        }, 1500);
+      } else {
+        setMessage(`❌ ${data.error || "Invalid credentials"}`);
       }
     } catch (err) {
       setMessage("❌ Network error");

@@ -7,47 +7,37 @@ import { signToken } from "@/lib/jwt";
 
 export async function POST(req: Request) {
   await connectDB();
-
   try {
-    const { email, password } = (await req.json()) as {
-      email?: string;
-      password?: string;
-    };
+    const { email, password } = (await req.json()) as { email?: string; password?: string };
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    const user = await UserModel.findOne({
-      email: email.toLowerCase().trim(),
-    }).exec();
-
+    const user = await UserModel.findOne({ email: email.toLowerCase().trim() }).exec();
     if (!user) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
+    // ❌ Blocked users cannot log in
     if (user.status === "blocked") {
-      const res = NextResponse.json({ error: "Your account is blocked. Contact support." }, { status: 403 });
-      res.cookies.set("token", "", {
-        httpOnly: true,
-        expires: new Date(0),
-        path: "/",
-      });
-      return res;
+      return NextResponse.json({ error: "Your account is blocked. Contact support." }, { status: 403 });
     }
 
-    if (user.status === "unverified") {
-      return NextResponse.json({ error: "Please confirm your email before logging in." }, { status: 403 });
-    }
+    // ✅ Unverified users are allowed to log in (teacher’s requirement)
+    // We will just send a warning message later
 
+    // Check password
     const pwOk = await comparePassword(password, user.passwordHash);
     if (!pwOk) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
+    // Update last login
     user.lastLogin = new Date();
     await user.save();
 
+    // Create JWT
     const token = signToken({
       id: user.id.toString(),
       email: user.email,
@@ -56,21 +46,17 @@ export async function POST(req: Request) {
 
     const res = NextResponse.json(
       {
-        message: "✅ Login successful",
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          status: user.status,
-        },
+        message: user.status === "unverified" ? "⚠️ Login successful, but please verify your email." : "✅ Login successful",
+        user: { id: user.id, name: user.name, email: user.email, status: user.status },
       },
       { status: 200 }
     );
 
+    // Set token cookie
     res.cookies.set("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // required by Vercel HTTPS
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // needed for cross-site cookies
+      secure: true,
+      sameSite: "none",
       path: "/",
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
