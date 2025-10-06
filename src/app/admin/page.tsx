@@ -23,9 +23,8 @@ export default function AdminPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/users");
+      const res = await fetch("/api/users", { cache: "no-store" });
       const data = await res.json();
-      // sort by lastLogin descending
       const sortedUsers = data.users.sort((a: User, b: User) => {
         const aTime = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
         const bTime = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
@@ -102,41 +101,42 @@ export default function AdminPage() {
           {/* Toolbar */}
           <div className="flex flex-wrap justify-between items-center mb-6 gap-3">
             <div className="flex gap-2">
-              {/* Toggle Block/Unblock button */}
+              {/* Always show both buttons side by side */}
               <button
-                onClick={() => handleAction(allActive ? "block" : "unblock")}
-                disabled={selectedIds.size === 0 || (!allActive && !allBlocked)}
+                onClick={() => handleAction("block")}
+                disabled={selectedIds.size === 0}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition
-        ${selectedIds.size === 0 || (!allActive && !allBlocked) ? "text-gray-400 border-gray-300 cursor-not-allowed" : allActive ? "text-blue-600 border-blue-300 hover:bg-blue-50" : "text-green-600 border-green-300 hover:bg-green-50"}`}
+      ${selectedIds.size === 0 ? "text-gray-400 border-gray-300 cursor-not-allowed" : "text-blue-600 border-blue-300 hover:bg-blue-50"}`}
               >
-                {allActive ? (
-                  <>
-                    <Lock size={16} /> Block
-                  </>
-                ) : (
-                  <>
-                    <Unlock size={16} /> Unblock
-                  </>
-                )}
+                <Lock size={16} /> Block
               </button>
-              {/* Delete */}
+
+              <button
+                onClick={() => handleAction("unblock")}
+                disabled={selectedIds.size === 0}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition
+      ${selectedIds.size === 0 ? "text-gray-400 border-gray-300 cursor-not-allowed" : "text-green-600 border-green-300 hover:bg-green-50"}`}
+              >
+                <Unlock size={16} /> Unblock
+              </button>
+
               <button
                 onClick={() => handleAction("delete")}
                 disabled={selectedIds.size === 0}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition
-        ${selectedIds.size === 0 ? "text-gray-400 border-gray-300 cursor-not-allowed" : "text-red-600 border-red-300 hover:bg-red-50"}`}
+      ${selectedIds.size === 0 ? "text-gray-400 border-gray-300 cursor-not-allowed" : "text-red-600 border-red-300 hover:bg-red-50"}`}
               >
                 <Trash2 size={16} /> Delete
               </button>
+
               <button
                 onClick={() => handleAction("deleteUnverified")}
                 disabled={!users.some((u) => u.status === "unverified")}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition
-    ${!users.some((u) => u.status === "unverified") ? "text-gray-400 border-gray-300 cursor-not-allowed" : "text-orange-600 border-orange-300 hover:bg-orange-50"}`}
+      ${!users.some((u) => u.status === "unverified") ? "text-gray-400 border-gray-300 cursor-not-allowed" : "text-orange-600 border-orange-300 hover:bg-orange-50"}`}
               >
                 <Trash2 size={16} /> Delete Unverified
               </button>
-              s
             </div>
 
             {/* Filter input */}

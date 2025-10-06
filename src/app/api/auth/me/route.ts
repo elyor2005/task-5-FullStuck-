@@ -1,29 +1,37 @@
-// src/app/api/auth/me/route.ts
-import { NextResponse, type NextRequest } from "next/server";
-import { verifyToken } from "@/lib/jwt";
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import UserModel from "@/models/User";
 
-export async function GET(req: NextRequest) {
-  await connectDB();
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const ids: string[] = body?.ids || [];
 
-  const token = req.cookies.get("token")?.value;
-  if (!token) {
-    return NextResponse.json({ user: null }, { status: 200 });
+    console.log("🟢 Unblock request received:", ids);
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: "No ids provided" }, { status: 400 });
+    }
+
+    await connectDB();
+
+    // Convert IDs to ObjectId
+    const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+
+    const result = await UserModel.updateMany({ _id: { $in: objectIds } }, { $set: { status: "active" } });
+
+    console.log("🔵 Mongo result:", result);
+
+    const updated = await UserModel.find({ _id: { $in: objectIds } });
+    console.log("✅ Updated users after unblock:", updated);
+
+    return NextResponse.json({
+      message: `Unblocked ${result.modifiedCount} users`,
+      updated,
+    });
+  } catch (err: any) {
+    console.error("🔴 Unblock error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-
-  const payload = verifyToken(token);
-
-  // Type guard to ensure payload has 'id'
-  if (!payload || typeof payload === "string" || !("id" in payload)) {
-    return NextResponse.json({ user: null }, { status: 200 });
-  }
-
-  // TypeScript now knows payload.id exists
-  const user = await UserModel.findById(payload.id).lean();
-  if (!user) {
-    return NextResponse.json({ user: null }, { status: 200 });
-  }
-
-  return NextResponse.json({ user });
 }

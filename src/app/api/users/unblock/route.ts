@@ -1,18 +1,15 @@
-// src/app/api/users/unblock/route.ts
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import UserModel from "@/models/User";
-import { serverAuthGuard } from "@/lib/authDuard";
+import { serverAuthGuard } from "@/lib/authGuard"; // ✅ fixed import
+import mongoose from "mongoose";
 
 export async function POST(req: Request) {
   const guard = await serverAuthGuard(req);
-  if (guard instanceof NextResponse) return guard; // auth failed / blocked etc
-
-  // guard is current user
-  const currentUser: any = guard;
+  if (guard instanceof NextResponse) return guard;
 
   try {
-    const body = await req.json(); // { ids: []}
+    const body = await req.json();
     const ids: string[] = body?.ids || [];
 
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -21,7 +18,10 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    const result = await UserModel.updateMany({ _id: { $in: ids } }, { $set: { status: "active" } }).exec();
+    // ✅ Convert string IDs to ObjectId
+    const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+
+    const result = await UserModel.updateMany({ _id: { $in: objectIds } }, { $set: { status: "active" } });
 
     return NextResponse.json({ message: `Unblocked ${result.modifiedCount || 0} users` });
   } catch (err: any) {
